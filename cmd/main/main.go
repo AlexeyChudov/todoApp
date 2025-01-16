@@ -1,7 +1,7 @@
 package main
 
 import (
-	"todoApp/pkg/handlers"
+	"github.com/AlexeyChudov/todoApp/pkg/handlers"
 )
 
 func main() {
