@@ -6,7 +6,6 @@ import (
 
 	//"strings"
 
-	"encoding/json"
 	dbPkg "github.com/AlexeyChudov/todoApp/pkg/Database"
 	"github.com/gorilla/mux"
 	"html/template"
@@ -25,7 +24,7 @@ type Task struct {
 	DueDate      time.Time `json:"due_date"`
 	Priority     string    `json:"priority"`
 }
-type TaskWithStrDates struct {
+type TaskStrDates struct {
 	Task
 	StrCreationDate string `json:"str_creation_date"`
 	StrDueDate      string `json:"str_due_date"`
@@ -45,8 +44,8 @@ func Main() {
 	//flag.StringVar(&dir, "dir", ".", "the directory to serve files from. Defaults to the current dir")
 	//flag.Parse()
 	fs := http.FileServer(http.Dir("./static/"))
-	//router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
-	router.Handle("/static/", http.StripPrefix("/static/", fs))
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
+	//router.Handle("/static/", http.StripPrefix("/static/", fs))
 	router.HandleFunc("/home", renderMainPage).Methods("GET")
 	router.HandleFunc("/home/tasks", handleTasks).Methods("GET")
 	router.HandleFunc("/home/tasks/", handleNewTask).Methods("POST")
@@ -64,32 +63,87 @@ func Main() {
 	}
 }
 func renderMainPage(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := renderTemplate("layout.html", "index.html")
+	tasks, err := SelectAllTasks("", "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Fatal(err)
 	}
-	//tasks, err := SelectAllTasks("")
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-
-	err = tmpl.Execute(w, nil)
-
+	page := 1
+	if r.URL.Query().Get("page") != "" {
+		page, err = strconv.Atoi(r.URL.Query().Get("page"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Println(err)
+		}
+	}
+	tasksPerPage := 5
+	divCheck := 0
+	if (len(tasks) % tasksPerPage) > 0 {
+		divCheck = 1
+	}
+	totalPages := len(tasks)/tasksPerPage + divCheck
+	currentPageTasks, err := pagination(tasks, tasksPerPage, page)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+	}
+	data := struct {
+		Tasks       []TaskStrDates
+		CurrentPage int
+		TotalPages  int
+		QueryParams struct {
+			Sort   string
+			Filter string
+		}
+	}{
+		Tasks:       currentPageTasks,
+		CurrentPage: page,
+		TotalPages:  totalPages,
+		QueryParams: struct {
+			Sort   string
+			Filter string
+		}{
+			Sort:   "",
+			Filter: "",
+		},
+	}
+	tmplFuncs := template.FuncMap{
+		"add": func(a, b int) int { return a + b },
+		"sub": func(a, b int) int { return a - b },
+		"seq": func(start, end int) []int {
+			var seq []int
+			for i := start; i <= end; i++ {
+				seq = append(seq, i)
+			}
+			return seq
+		},
+	}
+
+	tmpl, err := renderTemplate("layout.html", "index.html", "tasks.html", tmplFuncs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Fatal(err)
 	}
 
-}
-func renderTemplate(layout, templateName string) (*template.Template, error) {
-	lp := filepath.Join("templates", layout)
-	fp := filepath.Join("templates", templateName)
-	log.Println("Layout template", lp, "extended template: ", fp)
-	tmpl, err := template.ParseFiles(lp, fp)
+	err = tmpl.ExecuteTemplate(w, "layout", data)
 	if err != nil {
-		log.Print(err)
+		log.Println(err)
 	}
-	log.Println(tmpl.Tree)
+
+}
+func renderTemplate(layout, templatePage, contentTemplate string, funcs template.FuncMap) (*template.Template, error) {
+	lp := filepath.Join("templates", layout)
+	fp := filepath.Join("templates", templatePage)
+	content := filepath.Join("templates", contentTemplate)
+	tmpl := template.New("layout")
+	var err error
+	if len(funcs) > 0 {
+		tmpl.Funcs(funcs)
+	}
+	tmpl, err = tmpl.ParseFiles(lp, fp, content)
+	if err != nil {
+		log.Println(err)
+	}
 	return tmpl, err
 }
 
@@ -98,26 +152,70 @@ func handleTasks(w http.ResponseWriter, r *http.Request) {
 	sortMethod := r.URL.Query().Get("sort")
 	filterMethod := r.URL.Query().Get("filter")
 	var page int = 1
-	if r.URL.Query().Get("page") != "" {
-		page, err := strconv.Atoi(r.URL.Query().Get("page"))
-		if err != nil {
-			log.Print(err)
-		}
-	}
-
+	var err error
+	//if r.URL.Query().Get("page") != "" {
+	//	page, err = strconv.Atoi(r.URL.Query().Get("page"))
+	//	if err != nil {
+	//		http.Error(w, err.Error(), http.StatusBadRequest)
+	//	}
+	//}
 	tasks, err := SelectAllTasks(sortMethod, filterMethod)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Fatal(err)
 	}
-	data, err := json.Marshal(tasks)
+	tasksPerPage := 5
+	divCheck := 0
+	if (len(tasks) % tasksPerPage) > 0 {
+		divCheck = 1
+	}
+	totalPages := len(tasks)/tasksPerPage + divCheck
+	currentPageTasks, err := pagination(tasks, tasksPerPage, page)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+	}
+
+	data := struct {
+		Tasks       []TaskStrDates
+		CurrentPage int
+		TotalPages  int
+		QueryParams struct {
+			Sort   string
+			Filter string
+		}
+	}{
+		Tasks:       currentPageTasks,
+		CurrentPage: page,
+		TotalPages:  totalPages,
+		QueryParams: struct {
+			Sort   string
+			Filter string
+		}{
+			Sort:   sortMethod,
+			Filter: filterMethod,
+		},
+	}
+	tmplFuncs := template.FuncMap{
+		"add": func(a, b int) int { return a + b },
+		"sub": func(a, b int) int { return a - b },
+		"seq": func(start, end int) []int {
+			var seq []int
+			for i := start; i <= end; i++ {
+				seq = append(seq, i)
+			}
+			return seq
+		},
+	}
+
+	tmpl, err := renderTemplate("index.html", "tasks.html", "tasks.html", tmplFuncs)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write(data); err != nil {
 		log.Fatal(err)
 	}
+
+	err = tmpl.ExecuteTemplate(w, "tasks", data)
 
 }
 
