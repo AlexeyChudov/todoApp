@@ -13,9 +13,9 @@ import (
 	"time"
 )
 
-func SelectAllTasks(sortMethod, filter string) ([]TaskWithStrDates, error) {
+func SelectAllTasks(sortMethod, filter string) ([]TaskStrDates, error) {
 	allowedSortMethods := []string{"due_date", "creation_date"}
-	allowedFilterMethods := []string{"completed", "pending"}
+	allowedFilterMethods := []string{"all", "completed", "pending"}
 	var rows *sql.Rows
 	var err error
 	var query string
@@ -25,6 +25,8 @@ func SelectAllTasks(sortMethod, filter string) ([]TaskWithStrDates, error) {
 			query = fmt.Sprintf("SELECT * FROM tasks WHERE status = false ORDER BY %s ASC", sortMethod)
 		} else if filter == "completed" {
 			query = fmt.Sprintf("SELECT * FROM tasks WHERE status = true ORDER BY %s ASC", sortMethod)
+		} else {
+			query = fmt.Sprintf("SELECT * FROM tasks ORDER BY %s ASC", sortMethod)
 		}
 
 	case !slices.Contains(allowedSortMethods, sortMethod) && slices.Contains(allowedFilterMethods, filter):
@@ -32,11 +34,13 @@ func SelectAllTasks(sortMethod, filter string) ([]TaskWithStrDates, error) {
 			query = fmt.Sprintf("SELECT * FROM tasks WHERE status = false ORDER BY id")
 		} else if filter == "completed" {
 			query = fmt.Sprintf("SELECT * FROM tasks WHERE status = true ORDER BY id")
+		} else {
+			query = fmt.Sprintf("SELECT * FROM tasks ORDER BY id ASC")
 		}
 	case slices.Contains(allowedSortMethods, sortMethod) && !slices.Contains(allowedFilterMethods, filter):
 		query = fmt.Sprintf("SELECT * FROM tasks ORDER BY %s ASC", sortMethod)
 	default:
-		query = fmt.Sprintf("SELECT * FROM tasks ORDER BY id", sortMethod)
+		query = fmt.Sprintf("SELECT * FROM tasks ORDER BY id")
 
 	}
 	rows, err = dbPkg.SelectQuery(db, query)
@@ -45,9 +49,9 @@ func SelectAllTasks(sortMethod, filter string) ([]TaskWithStrDates, error) {
 
 	}
 
-	tasks := make([]TaskWithStrDates, 0)
+	tasks := make([]TaskStrDates, 0)
 	for rows.Next() {
-		task := new(TaskWithStrDates)
+		task := new(TaskStrDates)
 		err := rows.Scan(&task.Id, &task.Title, &task.Description, &task.CreationDate, &task.DueDate, &task.Priority, &task.Completed)
 		if err != nil {
 			log.Fatal(err)
@@ -92,4 +96,21 @@ func extractIdFromURL(r *http.Request, item string) (int, error) {
 }
 func taskDateToStringDate(t time.Time) string {
 	return t.Format("2006-01-02")
+}
+
+func pagination(arr []TaskStrDates, itemsPerPage, pageWanted int) ([]TaskStrDates, error) {
+	var currentPosition int
+	if pageWanted > (len(arr)/itemsPerPage)+1 {
+		return nil, errors.New("page wanted > items per page")
+	}
+	for currentPage := 0; currentPage < (len(arr)/itemsPerPage)+1; currentPage += 1 {
+		if currentPage+1 == pageWanted {
+			currentPosition = currentPage * itemsPerPage
+			break
+		}
+	}
+	if len(arr) < itemsPerPage {
+		return arr[currentPosition:len(arr)], nil
+	}
+	return arr[currentPosition : currentPosition+itemsPerPage], nil
 }
