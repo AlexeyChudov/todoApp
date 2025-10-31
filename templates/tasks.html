@@ -45,16 +45,16 @@
             <span class="page-link">&laquo;</span>
         </li>
         {{end}}
-        <p>{{$queryParams := .QueryParams}}</p>
+        {{$queryParams := .QueryParams}}
         {{range $i := seq 1 .TotalPages}}
         <li class="page-item {{if eq $i $.CurrentPage}}active{{end}}">
-            <a class="page-link" href="?page={{$i}}">{{$i}}</a>
+            <a class="page-link" href="?page={{$i}}&&filter={{$queryParams.Filter}}&&sort={{$queryParams.Sort}}">{{$i}}</a>
         </li>
         {{end}}
 
         {{if lt .CurrentPage .TotalPages}}
         <li class="page-item">
-            <a class="page-link" href="?page={{add .CurrentPage 1}}&&sort={{$queryParams.Sort}}&&filter={{$queryParams.Filter}}" aria-label="Next">
+            <a class="page-link" href="?page={{add .CurrentPage 1}}&&sort={{.QueryParams.Sort}}&&filter={{.QueryParams.Filter}}" aria-label="Next">
                 <span aria-hidden="true">&raquo;</span>
             </a>
         </li>

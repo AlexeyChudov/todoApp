@@ -45,3 +45,10 @@ func UpdateStatus(db *sql.DB, id int, status string) error {
 
 	return err
 }
+
+func GetRowsCount(db *sql.DB) (int, error) {
+
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM tasks").Scan(&count)
+	return count, err
+}

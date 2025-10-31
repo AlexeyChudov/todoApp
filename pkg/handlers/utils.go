@@ -13,7 +13,12 @@ import (
 	"time"
 )
 
-func SelectAllTasks(sortMethod, filter string) ([]TaskStrDates, error) {
+type TasksData struct {
+	tasks      []TaskStrDates
+	pagesCount int
+}
+
+func SelectTasks(sortMethod, filter string, tasksCount, offset int) ([]TaskStrDates, error) {
 	allowedSortMethods := []string{"due_date", "creation_date"}
 	allowedFilterMethods := []string{"all", "completed", "pending"}
 	var rows *sql.Rows
@@ -43,6 +48,8 @@ func SelectAllTasks(sortMethod, filter string) ([]TaskStrDates, error) {
 		query = fmt.Sprintf("SELECT * FROM tasks ORDER BY id")
 
 	}
+	query += fmt.Sprintf(" LIMIT %d OFFSET %d;", tasksCount, offset)
+	log.Println(query)
 	rows, err = dbPkg.SelectQuery(db, query)
 	if err != nil {
 		log.Fatal(err)
@@ -101,7 +108,7 @@ func taskDateToStringDate(t time.Time) string {
 func pagination(arr []TaskStrDates, itemsPerPage, pageWanted int) ([]TaskStrDates, error) {
 	var currentPosition int
 	if pageWanted > (len(arr)/itemsPerPage)+1 {
-		return nil, errors.New("page wanted > items per page")
+		return nil, errors.New("page wanted > pages count")
 	}
 	for currentPage := 0; currentPage < (len(arr)/itemsPerPage)+1; currentPage += 1 {
 		if currentPage+1 == pageWanted {
@@ -113,4 +120,35 @@ func pagination(arr []TaskStrDates, itemsPerPage, pageWanted int) ([]TaskStrDate
 		return arr[currentPosition:len(arr)], nil
 	}
 	return arr[currentPosition : currentPosition+itemsPerPage], nil
+}
+
+func getTasks(db *sql.DB, sortMethod, filterMethod string, tasksCount, offset int) (TasksData, error) {
+	tasks, err := SelectTasks(sortMethod, filterMethod, tasksCount, offset)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tasksPerPage := 5
+
+	totalTasks, err := dbPkg.GetRowsCount(db)
+	if err != nil {
+		log.Println(err)
+	}
+	divCheck := 0
+	if (totalTasks % tasksPerPage) > 0 {
+		divCheck = 1
+	}
+
+	//log.Println(totalTasks)
+	totalPages := (totalTasks / tasksPerPage) + divCheck
+
+	//currentPageTasks, err := pagination(tasks, tasksPerPage, page)
+	if err != nil {
+		log.Println(err)
+	}
+	data := TasksData{
+		tasks:      tasks,
+		pagesCount: totalPages,
+	}
+	return data, err
 }

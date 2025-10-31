@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
+	"os"
+
 	"strconv"
 
 	//"strings"
@@ -33,7 +36,15 @@ type TaskStrDates struct {
 var db *sql.DB
 
 func Main() {
-	connStr := "user=smash password=smash host=localhost port=5432 dbname=todoAppDB sslmode=disable"
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("POSTGRES_USER")
+	dbPass := os.Getenv("POSTGRES_PASSWORD")
+	dbName := os.Getenv("POSTGRES_DB")
+
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPass, dbName)
+	println(connStr)
 	db = dbPkg.Init("postgres", connStr)
 
 	router := mux.NewRouter()
@@ -63,12 +74,19 @@ func Main() {
 	}
 }
 func renderMainPage(w http.ResponseWriter, r *http.Request) {
-	tasks, err := SelectAllTasks("", "")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Fatal(err)
+	sortMethod := r.URL.Query().Get("sort")
+	filterMethod := r.URL.Query().Get("filter")
+	var page int = 1
+	var err error
+	tasksPerPage := 5
+	if r.URL.Query().Get("page") != "" {
+		page, err = strconv.Atoi(r.URL.Query().Get("page"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
 	}
-	page := 1
+	log.Println(page)
+	offset := (page - 1) * tasksPerPage
 	if r.URL.Query().Get("page") != "" {
 		page, err = strconv.Atoi(r.URL.Query().Get("page"))
 		if err != nil {
@@ -76,17 +94,13 @@ func renderMainPage(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 		}
 	}
-	tasksPerPage := 5
-	divCheck := 0
-	if (len(tasks) % tasksPerPage) > 0 {
-		divCheck = 1
-	}
-	totalPages := len(tasks)/tasksPerPage + divCheck
-	currentPageTasks, err := pagination(tasks, tasksPerPage, page)
+
+	tasksData, err := getTasks(db, sortMethod, filterMethod, tasksPerPage, offset)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+	currentPageTasks := tasksData.tasks
+	totalPages := tasksData.pagesCount
 	data := struct {
 		Tasks       []TaskStrDates
 		CurrentPage int
@@ -153,29 +167,22 @@ func handleTasks(w http.ResponseWriter, r *http.Request) {
 	filterMethod := r.URL.Query().Get("filter")
 	var page int = 1
 	var err error
-	//if r.URL.Query().Get("page") != "" {
-	//	page, err = strconv.Atoi(r.URL.Query().Get("page"))
-	//	if err != nil {
-	//		http.Error(w, err.Error(), http.StatusBadRequest)
-	//	}
-	//}
-	tasks, err := SelectAllTasks(sortMethod, filterMethod)
+	tasksPerPage := 5
+	if r.URL.Query().Get("page") != "" {
+		page, err = strconv.Atoi(r.URL.Query().Get("page"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+	}
+	log.Println(page)
+	offset := (page - 1) * tasksPerPage
+	tasksData, err := getTasks(db, sortMethod, filterMethod, tasksPerPage, offset)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Fatal(err)
 	}
-	tasksPerPage := 5
-	divCheck := 0
-	if (len(tasks) % tasksPerPage) > 0 {
-		divCheck = 1
-	}
-	totalPages := len(tasks)/tasksPerPage + divCheck
-	currentPageTasks, err := pagination(tasks, tasksPerPage, page)
 
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Println(err)
-	}
+	totalPages := tasksData.pagesCount
+	currentPageTasks := tasksData.tasks
 
 	data := struct {
 		Tasks       []TaskStrDates
@@ -222,9 +229,12 @@ func handleTasks(w http.ResponseWriter, r *http.Request) {
 func handleNewTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+	log.Println(r.FormValue("title"))
 	dueDate, err := time.Parse("2006-01-02", r.FormValue("due_date"))
 	if err != nil {
 		log.Fatal(err)
@@ -236,6 +246,7 @@ func handleNewTask(w http.ResponseWriter, r *http.Request) {
 		DueDate:      dueDate,
 		Priority:     r.FormValue("priority"),
 	}
+	log.Println(task.Title, task.DueDate)
 	strCreationDate, err := task.CreationDate.MarshalText()
 
 	strDueDate := task.DueDate.Format("2006-01-02")
@@ -244,8 +255,7 @@ func handleNewTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Fatal(err)
 	}
-
-	w.WriteHeader(http.StatusOK)
+	http.Redirect(w, r, "/home", http.StatusSeeOther)
 
 }
 

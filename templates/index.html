@@ -20,7 +20,7 @@
                                         <input type="text" class="form-control form-control-lg" id="exampleFormControlInput1" placeholder="Add new...">
                                         <a href="#!" data-mdb-toggle="tooltip" title="Set due date"><i class="fas fa-calendar-alt fa-lg me-3"></i></a>
                                         <div>
-                                            <button type="button" class="btn btn-primary">Add</button>
+                                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">Add</button>
                                         </div>
                                     </div>
                                 </div>
@@ -37,9 +37,9 @@
                                 <option value="pending">Pending</option>
                             </select>
                             <p class="small mb-0 ms-4 me-2 text-muted">Sort</p>
-                            <select class="select">
-                                <option value="1">Added date</option>
-                                <option value="2">Due date</option>
+                            <select class="select" id="sort-select">
+                                <option value="creation_date">Added date</option>
+                                <option value="due_date">Due date</option>
                             </select>
                             <a href="#!" style="color: #23af89;" data-mdb-toggle="tooltip" title="Ascending"><i class="fas fa-sort-amount-down-alt ms-2"></i></a>
                         </div>
@@ -50,7 +50,51 @@
 
 
                     </div>
+                    <style>
+                        .hidden {
+                            display: none;
+                        }
+                    </style>
+
                 </div>
+                <div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="addTaskModalLabel">Добавить задачу</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="task-form" method="post" enctype="application/x-www-form-urlencoded" \
+                                      action="/home/tasks/">
+                                    <div class="mb-3">
+                                        <label for="title" class="form-label">Заголовок</label>
+                                        <input type="text" class="form-control" id="title" name="title" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="description" class="form-label">Описание</label>
+                                        <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="due-date" class="form-label">Дата окончания</label>
+                                        <input type="date" class="form-control" id="due-date" name="due_date" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="priority" class="form-label">Приоритет</label>
+                                        <select class="form-select" id="priority" name="priority" required>
+                                            <option value="low">Низкий</option>
+                                            <option value="medium">Средний</option>
+                                            <option value="high">Высокий</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Добавить</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+
             </div>
         </div>
     </div>
