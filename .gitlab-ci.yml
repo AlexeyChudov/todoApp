@@ -36,7 +36,7 @@ buildx-publish:
     - if: '$CI_COMMIT_BRANCH'   # пуши по ветке: пайплайн создаётся, job manual
       when: manual
   tags:
-    - amd64
+    - aarch64
     - arm64
 
 
