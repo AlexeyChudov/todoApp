@@ -16,7 +16,7 @@ build-amd64:
   stage: build
   extends: .default_docker
   tags:
-    - docker-amd64
+    - amd64
   script:
     - |
       if [ -n "$CI_COMMIT_TAG" ]; then
@@ -45,7 +45,7 @@ build-arm64:
   stage: build
   extends: .default_docker
   tags:
-    - docker-arm64
+    - arm64
   script:
     - |
       if [ -n "$CI_COMMIT_TAG" ]; then
