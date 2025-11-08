@@ -10,9 +10,9 @@ buildx-publish:
     - name: docker:24-dind
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
-    - docker context create build || true
+    - docker context create builder-context || true
     - docker run --privileged --rm tonistiigi/binfmt --install all
-    - docker buildx create build --use --name multiarch --driver docker-container
+    - docker buildx create builder-context --use --name multiarch --driver docker-container
     - docker buildx inspect --bootstrap
   script:
     - |
