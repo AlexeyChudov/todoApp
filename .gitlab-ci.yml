@@ -19,7 +19,7 @@ buildx-publish:
   script:
     - |
       docker buildx build \
-        --platform linux/amd64,linux/arm64 \
+        --platform aarch64,arm64 \
         --pull \
         --cache-from type=registry,ref=${CI_REGISTRY_IMAGE}:buildcache \
         --cache-to type=registry,ref=${CI_REGISTRY_IMAGE}:buildcache,mode=max \
