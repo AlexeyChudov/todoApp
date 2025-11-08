@@ -10,7 +10,7 @@ buildx-publish:
     - name: docker:24-dind
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
-    - docker context create build --docker "skip-tls-verify=true"
+    - docker context create build || true
     - docker context use build
     - docker run --privileged --rm tonistiigi/binfmt --install all
     # Создать билдера Buildx
