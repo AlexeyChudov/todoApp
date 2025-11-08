@@ -21,9 +21,7 @@ buildx-publish:
       else
         TAG=$(echo $CI_COMMIT_SHORT_SHA)
       fi
-      docker buildx build \
-        --platform linux/amd64,linux/arm64 \
-        --push -t $IMAGE_NAME:$TAG" .
+      docker buildx build --platform linux/amd64,linux/arm64 --push -t "$IMAGE_NAME:$TAG" .
     - docker buildx imagetools inspect "${CI_REGISTRY_IMAGE}:${IMAGE_TAG}"
   after_script:
     - docker buildx rm multiarch || true
