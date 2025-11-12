@@ -14,7 +14,7 @@ build-cross-platform:
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     - docker context create ci
-    - docker buildx create --name multiarch-builder --driver docker-container --use
+    - docker buildx create --name multiarch-builder --driver docker-container --use ci
     - docker buildx inspect --bootstrap
 
   script:
