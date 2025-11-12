@@ -1,22 +1,22 @@
 stages:
   - build
-  - manifest
 
 variables:
   DOCKER_DRIVER: overlay2
 
-.default_docker:
+
+build-cross-platform:
+  stage: build
   image: docker:24-cli
   services:
-    - name: docker:24-dind
+   - name: docker:24-dind
+
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker context create ci
+    - docker buildx create --name multiarch-builder --driver docker-container --use
+    - docker buildx inspect --bootstrap
 
-build-amd64:
-  stage: build
-  extends: .default_docker
-  tags:
-    - amd64
   script:
     - |
       if [ -n "$CI_COMMIT_TAG" ]; then
@@ -24,79 +24,17 @@ build-amd64:
       else
         TAG=$(echo $CI_COMMIT_SHORT_SHA)
       fi
-      docker build \
-        --platform linux/amd64 \
-        --pull \
-        -t "${CI_REGISTRY_IMAGE}:${TAG}-amd64" \
+      -  docker buildx build \
+        --provenance=false \
+        --push --platform  linux/amd64,linux/arm64 \
+        --tag ${CI_REGISTRY_IMAGE}:${TAG} \
         .
-      docker push "${CI_REGISTRY_IMAGE}:${TAG}-amd64"
-  rules:
-    - if: '$CI_COMMIT_TAG'
-      when: always
-    - if: '$CI_COMMIT_BRANCH'
-      when: manual
-  artifacts:
-    reports:
-      dotenv: build_amd64.env
-  after_script:
-    - echo "AMD64_IMAGE=${CI_REGISTRY_IMAGE}:${TAG}-amd64" > build_amd64.env
 
-build-arm64:
-  stage: build
-  extends: .default_docker
-  tags:
-    - arm64
-  script:
-    - |
-      if [ -n "$CI_COMMIT_TAG" ]; then
-        TAG="$CI_COMMIT_TAG"
-      else
-        TAG=$(echo $CI_COMMIT_SHORT_SHA)
-      fi
-      docker build \
-        --platform linux/arm64 \
-        --pull \
-        -t "${CI_REGISTRY_IMAGE}:${TAG}-arm64" \
-        .
-      docker push "${CI_REGISTRY_IMAGE}:${TAG}-arm64"
-  rules:
-    - if: '$CI_COMMIT_TAG'
-      when: always
-    - if: '$CI_COMMIT_BRANCH'
-      when: manual
-  artifacts:
-    reports:
-      dotenv: build_arm64.env
   after_script:
-    - echo "ARM64_IMAGE=${CI_REGISTRY_IMAGE}:${TAG}-arm64" > build_arm64.env
+    - docker buildx rm multiarch-builder || true
 
-publish-manifest:
-  stage: manifest
-  image: docker:24-cli
-  needs: [build-amd64, build-arm64]
-  before_script:
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
-  script:
-    - |
-      if [ -n "$CI_COMMIT_TAG" ]; then
-        TAG="$CI_COMMIT_TAG"
-      else
-        TAG=$(echo $CI_COMMIT_SHORT_SHA)
-      fi
-      docker buildx imagetools create \
-        -t "${CI_REGISTRY_IMAGE}:${TAG}" \
-        "${CI_REGISTRY_IMAGE}:${TAG}-amd64" \
-        "${CI_REGISTRY_IMAGE}:${TAG}-arm64"
-      # Опционально обновляем latest на тот же манифест
-      docker buildx imagetools create \
-        -t "${CI_REGISTRY_IMAGE}:latest" \
-        "${CI_REGISTRY_IMAGE}:${TAG}-amd64" \
-        "${CI_REGISTRY_IMAGE}:${TAG}-arm64"
-    # Проверяем манифест
-    - docker buildx imagetools inspect "${CI_REGISTRY_IMAGE}:${TAG}"
   rules:
     - if: '$CI_COMMIT_TAG'
       when: always
     - if: '$CI_COMMIT_BRANCH'
       when: manual
-  dependencies: []
