@@ -24,6 +24,8 @@ build-cross-platform:
       fi
       docker buildx build \
         --provenance=false \
+        --cache-from type=registry,ref=${CI_REGISTRY_IMAGE}:buildcache \
+        --cache-to type=registry,ref=${CI_REGISTRY_IMAGE}:buildcache,mode=max \
         --push --platform  linux/amd64,linux/arm64 \
         --tag $CI_REGISTRY_IMAGE:$TAG \
         .

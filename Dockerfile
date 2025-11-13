@@ -1,9 +1,10 @@
 FROM --platform=$BUILDPLATFORM golang:1.22-bookworm AS builder
 ARG TARGETOS
 ARG TARGETARCH
+ENV GOPROXY=https://proxy.golang.org,direct
 WORKDIR /app
 COPY . .
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download -x
 ENV CGO_ENABLED=0
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH}  go build -o todoapp ./cmd/main/main.go
 
