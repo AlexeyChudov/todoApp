@@ -3,13 +3,13 @@ ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /app
 COPY . .
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH}  go build -o bin/todoapp ./cmd/main/main.go
+ENV CGO_ENABLED=0
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH}  go build -o todoapp ./cmd/main/main.go
 
 FROM alpine:3.20 AS runner
-RUN apk --no-cache add ca-certificates
 WORKDIR /app
-COPY --from=builder /app/bin/todoapp .
+COPY --from=builder /app/todoapp ./
 COPY --from=builder /app/static ./static
 COPY --from=builder /app/templates ./templates
 EXPOSE 3000
-CMD ["./bin/todoapp"]
+ENTRYPOINT ["./todoapp"]

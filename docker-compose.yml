@@ -18,7 +18,7 @@ services:
 
 
   todo-app:
-    image: francescototti/todoapp:multistage
+    image: registry.csc.sibsutis.ru/is341s29/arp_chudov_is341s29:v1.0
     ports:
       - "3000:3000"
     environment:
@@ -34,10 +34,6 @@ services:
       - app-network
     links:
       - postgres:postgres
-
-
-
-
 
 volumes:
   db_data:
