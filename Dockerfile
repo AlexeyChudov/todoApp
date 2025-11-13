@@ -3,6 +3,7 @@ ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /app
 COPY . .
+RUN go mod download
 ENV CGO_ENABLED=0
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH}  go build -o todoapp ./cmd/main/main.go
 
