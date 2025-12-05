@@ -1,9 +1,13 @@
 services:
   postgres:
+
     image: postgres:16.9-alpine
+    ports:
+      - "5432:5432"
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
+      POSTGRES_DB: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
       - ./dump:/docker-entrypoint-initdb.d

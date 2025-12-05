@@ -1,7 +1,7 @@
 package Server
 
 import (
-	repo "github.com/AlexeyChudov/todoApp/internal/Repository"
+	repo "github.com/AlexeyChudov/todoApp/internal/repository"
 	taskSvc "github.com/AlexeyChudov/todoApp/internal/service/Tasks"
 
 	"net/http"

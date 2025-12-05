@@ -1,0 +1,2 @@
+#!/bin/bash
+docker run --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=smash -e  POSTGRES_USER=smash -e POSTGRES_DB=todoAppDB -v db_data:/var/lib/postgresql/16/main/  -v /home/alex/GolandProjects/todoApp/dump:/docker-entrypoint-initdb.d -d postgres:16.9-alpine

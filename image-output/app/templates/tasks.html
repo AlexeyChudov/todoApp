@@ -1,0 +1,69 @@
+
+
+{{define "tasks"}}
+<div class="tasks-content" id="task-list">
+    {{range $idx, $item := .Tasks}}
+    <ul class="list-group list-group-horizontal rounded-0 bg-transparent pagination-sm">
+        <li class="list-group-item d-flex align-items-center ps-0 pe-3 py-1 rounded-0 border-0 bg-transparent">
+            <div class="form-check">
+                <input
+                        class="form-check-input me-0"
+                        type="checkbox"
+                        value=""
+                        id="flexCheckChecked1"
+                        aria-label="..."
+
+                />
+            </div>
+        </li>
+        <li class="list-group-item px-3 py-1 d-flex align-items-center flex-grow-1 border-0 bg-transparent">
+            <p class="lead fw-normal mb-0">{{$item.Title}}</p>
+        </li>
+        <li class="list-group-item ps-3 pe-0 py-1 rounded-0 border-0 bg-transparent">
+            <div class="d-flex flex-row justify-content-end mb-1">
+                <a href="#!" class="text-info" data-mdb-toggle="tooltip" title="Edit todo"><i class="fas fa-pencil-alt me-3"></i></a>
+                <a href="#!" class="text-danger" data-mdb-toggle="tooltip" title="Delete todo"><i class="fas fa-trash-alt"></i></a>
+            </div>
+            <div class="text-end text-muted">
+                <a href="#!" class="text-muted" data-mdb-toggle="tooltip" title="Created date">
+                    <p class="small mb-0"><i class="fas fa-info-circle me-2"></i>{{$item.StrCreationDate}}</p></a>
+            </div>
+        </li>
+    </ul>
+    {{end}}
+</div>
+<nav id="pagination-nav-bar">
+    <ul class="pagination justify-content-center">
+        {{if gt .CurrentPage 1}}
+        <li class="page-item">
+                <a class="page-link" href="?page={{sub .CurrentPage 1}}&&sort={{.QueryParams.Sort}}&&filter={{.QueryParams.Filter}}" aria-label="Previous">
+            <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        {{else}}
+        <li class="page-item disabled">
+            <span class="page-link">&laquo;</span>
+        </li>
+        {{end}}
+        {{$queryParams := .QueryParams}}
+        {{range $i := seq 1 .TotalPages}}
+        <li class="page-item {{if eq $i $.CurrentPage}}active{{end}}">
+            <a class="page-link" href="?page={{$i}}&&filter={{$queryParams.Filter}}&&sort={{$queryParams.Sort}}">{{$i}}</a>
+        </li>
+        {{end}}
+
+        {{if lt .CurrentPage .TotalPages}}
+        <li class="page-item">
+            <a class="page-link" href="?page={{add .CurrentPage 1}}&&sort={{.QueryParams.Sort}}&&filter={{.QueryParams.Filter}}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+        {{else}}
+        <li class="page-item disabled">
+            <span class="page-link">&raquo;</span>
+        </li>
+        {{end}}
+    </ul>
+</nav>
+
+{{end}}
